@@ -1,0 +1,356 @@
+---
+title: "Build Reference Catchments"
+output: html_document
+---
+
+Project: GFv2.0  
+Script purpose: Build a topologically correct, simple, valid, version of NHDPlus2.1 catchments
+Date: 05/03/2022 
+Author: [Mike Johnson](jjohnson@lynker.com)
+
+```{r setup}
+# Where to build intermediate data...
+base_dir   = './'
+
+# Delete all intermediate data at end?
+purge = TRUE
+
+source("catchments_build_config.R")
+```
+
+# Step 1: NHDPlus Catchment Data
+
+```{r}
+df = get_bucket_df(epa_bucket, max = Inf)
+
+v = grep("_NHDPlusCatchment_", df$Key, value =TRUE)
+
+####
+
+all = data.frame(
+  key = v,
+  VPU = sapply(strsplit(v, "_"), `[`, 3),
+  region = sapply(strsplit(v, "_"), `[`, 2),
+  link = paste0('https://', epa_bucket, '.s3.amazonaws.com/', v)) |>
+mutate(outfile = paste0(epa_download, "/NHDPlus", VPU, ".7z"),
+       shp     = paste0("NHDPlus", region, "/NHDPlus", VPU, '/NHDPlusCatchment/Catchment.shp'))
+
+df = filter(all, !all$shp %in% list.files(epa_download, recursive  = TRUE, pattern = ".shp$"))
+
+####
+
+for(i in 1:nrow(df)){
+  save_object(object = df$key[i], bucket = epa_bucket,file = df$outfile[i])
+  archive_extract(df$outfile[i], dir = epa_download)
+  unlink(df$outfile[i])
+}
+
+####
+
+all$gpkg = paste0(catchments_dir, "/NHDPlus", all$VPU, ".gpkg")
+
+df2 = filter(all, !all$gpkg %in% list.files(catchments_dir, full.names = TRUE))
+
+if(nrow(df2) > 0){
+  calls = paste('ogr2ogr -f GPKG', df2$gpkg, df2$shp)
+
+  for(i in 1:length(calls)){
+    system(calls[i])
+    message(i)
+  }
+}
+
+
+if(purge){
+   unlink(epa_download, recursive = TRUE) 
+}
+```
+
+# Step 2: Clean
+
+```{r}
+files       = list.files(catchments_dir, 
+                         full.names = TRUE, 
+                         pattern = ".gpkg$")
+
+out_geojson = gsub('gpkg', 
+                   'geojson', paste0(cleaned_dir, basename(files)))
+
+
+for(i in 1:length(files)){
+
+  if(!file.exists(out_geojson[i])){
+    catchments  = read_sf(files[i])
+    names(catchments) = tolower(names(catchments))
+
+    ll = clean_geometry(
+      catchments,
+      sys = TRUE,
+      'featureid',
+      keep = NULL)
+
+    lt          =  st_make_valid(ll)
+    lt$areasqkm =  drop_units(set_units(st_area(lt), "km2"))
+    lt          =  st_transform(lt, 4326)
+
+    write_sf(lt, out_geojson[i])
+
+    rm(ll); rm(catchments); rm(lt); gc()
+  }
+  
+  log_info("Cleaned VPU: ",i,  " of ", length(files))
+}
+
+
+
+if(purge){
+  unlink(catchments_dir, recursive = TRUE) 
+}
+```
+
+# Step 3: Simplify
+
+```{r}
+all  = list.files(cleaned_dir, 
+                  full.names = TRUE, 
+                  pattern = ".geojson$")
+
+out  = paste0(simplified_dir, "/", 
+              gsub(".geojson", "", 
+              basename(all)), "_t", num, ".geojson")
+
+out2 = gsub('geojson', "gpkg", out)
+
+for(i in 1:length(out2)){
+  if(!file.exists(out2[i])){
+    system(paste0('node  --max-old-space-size=16000 `which mapshaper` ', all[i], ' -simplify ',num, '% keep-shapes -o ', out[i]))
+    system(paste('ogr2ogr', out2[i], out[i], "-nln catchments"))
+    unlink(out[i])
+  }
+
+  log_info("Simplified: ", i ,  " of ", length(out2))
+}
+
+```
+
+# Step 4: Rectify
+
+```{r}
+topos = pu_adjanceny()
+
+files       = list.files(simplified_dir, full.names = TRUE, pattern = ".gpkg$")
+
+
+for(i in 1:nrow(topos)){
+
+  VPU1 = topos$VPU1[i]
+  VPU2 = topos$VPU2[i]
+
+  v_path_1 = find_file_path(VPU1, files, new_dir)
+  v_path_2 = find_file_path(VPU2, files, new_dir)
+
+  log_info('\tRead in touching pairs')
+    v1 = read_sf(v_path_1) |>
+      st_transform(5070) |>
+      st_make_valid() |>
+      rename_geometry('geometry')
+
+    v2 = read_sf(v_path_2) |>
+      st_transform(5070) |>
+      st_make_valid() |>
+      rename_geometry('geometry')
+
+  log_info('\tIsolate "edge" catchments')
+    old_1 = st_filter(v1, v2)
+    old_2 = st_filter(v2, v1)
+
+  log_info('\tErase fragments of OVERLAP')
+    new_1 = st_difference(old_1, st_union(st_combine(old_2)))
+    new_2 = st_difference(old_2, st_union(st_combine(old_1)))
+
+    u1 = sf_remove_holes(st_union(new_1))
+    u2 = sf_remove_holes(st_union(new_2))
+
+   log_info('\tBuild Fragments')
+
+    base_cats = bind_rows(new_1, new_2)
+    base_union = sf_remove_holes(st_union(c(u1,u2)))
+
+    frags = st_difference(base_union, st_union(st_combine(base_cats))) |>
+      st_cast("MULTIPOLYGON") |>
+      st_cast("POLYGON") |>
+      st_as_sf() |>
+      mutate(id = 1:n()) %>%
+      rename_geometry('geometry') |>
+      st_buffer(.0001)
+
+    out = tryCatch({
+      suppressWarnings({
+        st_intersection(frags, base_cats) %>%
+          st_collection_extract("POLYGON")
+      })
+    }, error = function(e) { NULL })
+
+
+  ints = out %>%
+    mutate(l = st_area(.)) %>%
+    group_by(.data$id) %>%
+    slice_max(.data$l, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(.data$featureid, .data$id, .data$l) %>%
+    st_drop_geometry()
+
+  tj = right_join(frags,
+                  ints,
+                  by = "id") %>%
+    bind_rows(base_cats) %>%
+    dplyr::select(-.data$id) %>%
+    group_by(.data$featureid) %>%
+    mutate(n = n()) %>%
+    ungroup()
+
+  in_cat = suppressWarnings({
+    hyRefactor::union_polygons_geos(filter(tj, .data$n > 1) , 'featureid') %>%
+      bind_rows(dplyr::select(filter(tj, .data$n == 1), .data$featureid)) %>%
+      mutate(tmpID = 1:n()) |>
+      st_make_valid()
+  })
+
+  log_info('\tReassemble VPUS')
+
+    inds = in_cat$featureid[in_cat$featureid %in% v1$featureid]
+
+    to_keep_1 = bind_rows( filter(v1, !featureid %in% inds),
+                           filter(in_cat, featureid %in% inds)) |>
+      select(names(v1)) %>%
+      mutate(areasqkm = hyRefactor::add_areasqkm(.))
+
+    inds2 = in_cat$featureid[in_cat$featureid %in% v2$featureid]
+
+    to_keep_2 = bind_rows( filter(v2, !featureid %in% inds2),
+                           filter(in_cat, featureid %in% inds2)) |>
+      select(names(v1)) %>%
+      mutate(areasqkm = hyRefactor::add_areasqkm(.))
+
+    log_info('\tWrite VPUS')
+    write_sf(to_keep_1, v_path_1, "catchments", overwrite = TRUE)
+    write_sf(to_keep_2, v_path_2, "catchments", overwrite = TRUE)
+
+    log_info('Finished: ', i , " of ", nrow(topos))
+
+}
+
+if(purge){
+  unlink(cleaned_dir, recursive = TRUE)
+}
+
+```
+
+# Step 5: Merge CONUS
+
+```{r}
+
+gpkgs <- list.files(simplified_dir, full.names = TRUE, pattern = ".gpkg$")
+
+vpu <- gsub(".gpkg", "", gsub(paste0(simplified_dir, "/NHDPlus"), "", gpkgs))
+vpu <- sapply(strsplit(vpu, "_"),"[[",1)
+
+rpuid <- get_vaa("rpuid")
+
+output <- list()
+
+for (i in 1:length(gpkgs)) {
+
+  tst <- read_sf(gpkgs[i]) |>
+    st_cast("POLYGON") %>%
+    mutate(areasqkm = add_areasqkm(.)) |>
+    mutate(tmpID = 1:n()) |>
+    rename_geometry("geometry")
+
+  dups <- tst$featureid[which(duplicated(tst$featureid))]
+
+  if(length(dups) != 0){
+
+      bad <- filter(tst, featureid %in% dups) |>
+        group_by(featureid) |>
+        slice_min(areasqkm) |>
+        ungroup()
+
+      good <- filter(tst, !tmpID %in% bad$tmpID)
+
+      out <- tryCatch(
+        {
+          suppressWarnings({
+            st_intersection(bad, select(good, tmpID)) %>%
+              st_collection_extract("POLYGON") |>
+              filter(tmpID != tmpID.1)
+          })
+        },
+        error = function(e) {
+          NULL
+        }
+      )
+
+      ints <- out %>%
+        mutate(l = st_area(.)) %>%
+        group_by(.data$tmpID) %>%
+        slice_max(.data$l, with_ties = FALSE) %>%
+        ungroup() %>%
+        select(.data$tmpID.1, .data$tmpID, .data$l) %>%
+        st_drop_geometry()
+
+      tj <- right_join(bad,
+        ints,
+        by = "tmpID"
+      ) %>%
+        select(badID = tmpID, tmpID = tmpID.1, featureid)
+
+      tmp <- bind_rows(tj, filter(good, tmpID %in% tj$tmpID)) |>
+        hyRefactor::union_polygons_geos("tmpID") |>
+        select(tmpID)
+
+      tmp2 <- filter(good, tmpID %in% tmp$tmpID) |>
+        st_drop_geometry() |>
+        right_join(tmp)
+
+      tst = bind_rows(
+        filter(good, !tmpID %in% tmp2$tmpID),
+        tmp2
+      )
+}
+
+
+  output[[i]] <- tst |>
+    mutate(vpuid = vpu[i]) |>
+    left_join(rpuid, by = c("featureid" = "comid")) |>
+    rename_geometry("geometry") |>
+    select(-gridcode, -sourcefc, -tmpID) |>
+    st_transform(facfdr_crs)
+
+  message(vpu[i])
+}
+
+
+all <- bind_rows(output) |>
+  st_make_valid()
+
+
+unlink("data/reference_catchments.gpkg")
+write_sf(all, "data/reference_catchments.gpkg")
+
+if(purge){
+  unlink(simplified_dir, recursive = TRUE)
+}
+
+```
+
+# Step 6: Upload to Science Base
+
+```{r}
+sbtools::authenticate_sb()
+sbtools::item_append_files("61295190d34e40dd9c06bcd7", "data/reference_catchments.gpkg")
+```
+
+
+
+
