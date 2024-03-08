@@ -269,7 +269,8 @@ for(i in 1:length(fl_paths)){
     
     nhd %>% 
       filter(COMID %in% new_atts$comid) %>%
-      select(-override_tocomid)  %>%
+      select(-override_tocomid)  %>% 
+      mutate(lengthkm  = hydrofab::add_lengthkm(.)) %>% 
       write_sf(outfile, "flowlines")
     
   
