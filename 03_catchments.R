@@ -7,7 +7,6 @@ out_geojson = gsub('gpkg', 'geojson', glue('{cleaned_dir}{gsub("NHDPlus", "clean
 out_tmp  = glue("{simplified_dir}{gsub('.geojson', '', gsub('cleaned', 'catchments', basename(out_geojson)))}.geojson")
 out_gpkg = gsub('geojson', "gpkg", out_tmp)
 
-
 # Clean files -------------------------------------------------------------
 
 for(i in 1:length(files)){
@@ -28,7 +27,6 @@ for(i in 1:length(files)){
                          fl_ID     = "comid",
                          keep       = num,
                          sys        = TRUE)
-
       write_sf(out, out_gpkg[i], "catchments")
    }
   
@@ -147,7 +145,57 @@ for(i in 1:nrow(topos)){
 }
 
 #######################################################################
-#######################################################################
-#######################################################################
+
+
+files = list.files(reference_dir, full.names = TRUE, pattern = "gpkg$") 
+files = grep("catchments", files, value = TRUE)
+
+for(i in 1:length(files)){
+  
+  cats = read_sf(files[i])  %>% 
+    lwgeom::st_snap_to_grid(size = .0009) %>% 
+    hydrofab:::fast_validity_check()
+  
+  imap = st_within(cats)
+  
+  df = data.frame(
+    within = rep(cats$featureid, times = lengths(imap)),
+    featureid = cats$featureid[unlist(imap)]
+  ) %>% 
+    filter(featureid != within)
+  
+  d = list()
+  u = unique(df$featureid)
+  
+  for(j in 1:length(u)){
+    d[[j]] = st_difference(
+      filter(cats, featureid %in% u[j]),
+      st_make_valid(st_combine(filter(cats, featureid %in% filter(df, featureid == u[j])$within))),
+    )
+  }
+
+  cats1 = bind_rows(d)
+  
+  cats2 = filter(cats, !featureid %in% unlist(df)) %>% 
+    bind_rows(cats1)
+  
+  cats3 = filter(cats, featureid %in% filter(df, !within %in% cats2$featureid)$within) %>% 
+    bind_rows(cats2) %>% 
+    st_cast("POLYGON") %>% 
+    mutate(areasqkm = hydrofab::add_areasqkm(.))
+  
+  log_info('\tWrite VPUS: ', basename(files[i]))
+  
+  stopifnot(nrow(cats3) == nrow(cats))
+  
+  write_sf(cats3, files[i], "catchments", overwrite = TRUE)
+  
+}
+
+####################################################################
+
+
+
+
 
 

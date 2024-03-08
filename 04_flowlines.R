@@ -34,6 +34,7 @@ source('reference-features/nhdplusv2/config.R')
 
 fl_paths  = list.files(fl_dir,  full.names = TRUE)
 ble_paths = list.files(ble_dir, full.names = TRUE)
+cat_paths = list.files(catchments_dir, full.names = TRUE)
 
 new_atts = read_parquet(enhd)
 
@@ -62,12 +63,8 @@ if (!file.exists(output_file)) {
   message("Creating ble_events.gpkg...")
   
   # read in BurnLineEvents from NHD geodatabase
-  ble <- read_sf(nhdplus_ble_path, "BurnLineEvent")
-  # ble <- read_sf('/Volumes/Transcend/ngen/NHDPlusNationalData/NHDPlusV21_National_Seamless_Flattened_Lower48.gdb', "BurnLineEvent")
-
-  # filter out empty geometries
   ble <- 
-    ble %>%
+    read_sf(nhdplus_ble_path, "BurnLineEvent") %>%
     st_zm() %>%
     filter(!st_is_empty(.))
 
@@ -101,11 +98,7 @@ if (!file.exists(output_file)) {
 }
 
 # read in Burn Line Events geopackage
-system.time({
-  b <- read_sf(output_file)
-})
-
-# i = 8
+b <- read_sf(output_file)
 
 # Loop through each file path in fl_paths
 for(i in 1:length(fl_paths)){
@@ -133,7 +126,10 @@ for(i in 1:length(fl_paths)){
         vaa, 
         by = c("COMID" = "comid")
         ) %>%
-      select(COMID, fromnode, tonode, startflag, streamcalc, divergence, dnminorhyd) %>%
+      select(COMID, 
+             fromnode, tonode, 
+             startflag, streamcalc, 
+             divergence, dnminorhyd) %>%
       left_join(
         new_atts, 
         by = c("COMID" = "comid")
@@ -141,15 +137,36 @@ for(i in 1:length(fl_paths)){
       align_nhdplus_names() %>%
       mutate(LENGTHKM  = add_lengthkm(.))
     
-    # Filter the b burn line events dataset on matching COMIDs in 'nhd'
-    ble = filter(b, COMID %in% nhd$COMID)
+    cats = glue("{reference_dir}catchments_{which_VPU}.gpkg") %>% 
+      read_sf() %>% 
+      st_transform(5070)
+    
+    ### NEW ###
+    
+    ble_options <- 
+      filter(nhd, COMID %in% b$COMID) %>% 
+      st_transform(5070)
+    
+    st_geometry(ble_options) <- 
+      st_geometry(get_node(ble_options, "start"))
+    
+    imap <- st_intersects(ble_options, cats)
+  
+    df <- data.frame(
+      start = rep(ble_options$COMID, times = lengths(imap)),
+      cat = cats$featureid[unlist(imap)]
+    ) %>% 
+      filter(start != cat)
 
     # Find the matching indices of COMIDs between 'ble' and 'nhd'
-    matcher = match(ble$COMID, nhd$COMID)
+    ble = filter(nhd, COMID %in% df$start)
+    matcher = match(df$start, nhd$COMID)
 
     # Replace the geometry in nhd geometry with ble geometries at the matching indices
     st_geometry(nhd)[matcher] <- st_geometry(ble)
-    
+    nhd$ble <- FALSE
+    nhd$ble[matcher] <- TRUE
+  
     # Generate a custom network based on 'nhd' data, and create a to override_tocomid column from get_tocomid() function
     custom_net <- 
       nhd %>% 
@@ -168,12 +185,10 @@ for(i in 1:length(fl_paths)){
       # dplyr::relocate(COMID, toCOMID, override_tocomid)
       mutate(override_tocomid = ifelse(toCOMID == 0, override_tocomid, toCOMID))
 
-    # is a headwater and for sure flows to something,  where COMID is not in override_tocomid
+    # is a headwater and for sure flows to something, where COMID is not in override_tocomid
     check <- !nhd$COMID %in% nhd$override_tocomid &
       !(nhd$override_tocomid == 0 | is.na(nhd$override_tocomid) |
           !nhd$override_tocomid %in% nhd$COMID)
-    
-    # table(check)
     
     # filter nhd based on the check condition above
     check_direction <- filter(nhd, check)
@@ -237,7 +252,7 @@ for(i in 1:length(fl_paths)){
     
     message("check vector values:\n",
       paste0(names(table(check)), ": ", table(check), sep = "\n")
-      )
+    )
 
     # Check for errors other than empty geometry errors
     if(!all(sapply(st_geometry(errors), st_is_empty))) {

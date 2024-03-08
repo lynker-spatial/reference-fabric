@@ -24,7 +24,7 @@ vpu_topo_csv = "data/vpu_topology.csv"
 
 facfdr_crs = '+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'
 
-num        = .20
+num        = .25
 
 par = 3
 
