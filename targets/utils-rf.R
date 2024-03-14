@@ -199,6 +199,8 @@ rf_clean_catchment <- function(catchment_path, flowpath_path, outfile, keep = 0.
     flowlines <- sf::read_sf(flowpath_path)
     names(flowlines) <- tolower(names(flowlines))
 
+    # TODO: Tempr dir
+
     out <- hydrofab::clean_geometry(
         catchments = catchment,
         flowlines  = flowlines,

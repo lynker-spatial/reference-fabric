@@ -37,14 +37,40 @@ list(
                     dnminorhyd
                 ) |>
                 dplyr::left_join(rf_enhd, by = c("COMID" = "comid")) |>
-                nhdplusTools::align_nhdplus_names()
+                nhdplusTools::align_nhdplus_names() |>
+                dplyr::mutate(LENGTHKM = hydrofab::add_lengthkm(geom))
 
-            nhd <- nhd |>
-                   dplyr::mutate(LENGTHKM = hydrofab::add_lengthkm(nhd))
+            cats <- grep(
+                pattern = rf_extract_vpu(rf_nhdplus_fl_path),
+                x       = rf_cat_out,
+                value   = TRUE
+            ) |>
+                sf::read_sf() |>
+                sf::st_transform(5070)
 
-            ble <- dplyr::filter(rf_fl_ble, COMID %in% nhd$COMID)
-            .matches <- match(ble$COMID, nhd$COMID)
+            ### NEW ###
+            ble_options <-
+                dplyr::filter(nhd, COMID %in% rf_fl_ble$COMID) |>
+                sf::st_transform(5070)
+
+            sf::st_geometry(ble_options) <-
+                nhdplusTools::get_node(ble_options, "start") |>
+                sf::st_geometry()
+
+            imap <- sf::st_intersects(ble_options, cats)
+
+            df <- data.frame(
+                start = rep(ble_options$COMID, times = lengths(imap)),
+                cat = cats$featureid[unlist(imap)]
+            ) |>
+                dplyr::filter(start != cat)
+
+            ble <- dplyr::filter(nhd, COMID %in% df$start)
+            .matches <- match(df$start, nhd$COMID)
+
             sf::st_geometry(nhd)[.matches] <- sf::st_geometry(ble)
+            nhd$ble <- FALSE
+            nhd$ble[.matches] <- TRUE
 
             custom_net <-
                 nhd |>

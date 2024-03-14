@@ -40,7 +40,7 @@ list(
             split(rf_merge_info, seq_len(nrow(rf_merge_info))) |>
                 lapply(FUN = function(layer) {
                     sf::write_sf(
-                        sf::read_sf(layer$path),
+                        sf::st_transform(sf::read_sf(layer$path), 5070),
                         dsn   = layer$outfile,
                         layer = layer$type
                     )
@@ -67,12 +67,18 @@ list(
             exists <- setNames(logical(length(layers)), layers)
             for (layer in layers) {
                 dplyr::filter(.tbl, type == layer) |>
-                    sf::st_as_sf() |>
+                    dplyr::pull(path) |>
+                    sf::read_sf() |>
+                    sf::st_transform(5070) |>
                     sf::write_sf(
                         outfile,
                         layer = layer,
                         append = exists[[layer]]
                     )
+
+                if (!exists[[layer]]) {
+                    exists[[layer]] <- TRUE
+                }
             }
 
             outfile
