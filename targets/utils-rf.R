@@ -199,8 +199,19 @@ rf_clean_catchment <- function(catchment_path, flowpath_path, outfile, keep = 0.
     flowlines <- sf::read_sf(flowpath_path)
     names(flowlines) <- tolower(names(flowlines))
 
-    # TODO: Tempr dir
+    old_tmpdir <- getOption("ms_tempdir")
 
+    tmpdir <- file.path(
+        tempdir(),
+        tools::file_path_sans_ext(basename(catchment_path))
+    )
+
+    if (!dir.exists(tmpdir)) {
+        dir.create(tmpdir)
+    }
+
+    options(ms_tempdir = tmpdir)
+    on.exit(unlink(tmpdir))
     out <- hydrofab::clean_geometry(
         catchments = catchment,
         flowlines  = flowlines,
@@ -209,6 +220,10 @@ rf_clean_catchment <- function(catchment_path, flowpath_path, outfile, keep = 0.
         keep       = keep,
         sys        = TRUE
     )
+
+    if (!is.null(old_tmpdir)) {
+        options(ms_tempdir = old_tmpdir)
+    }
 
     sf::write_sf(out, outfile, "catchments")
 
