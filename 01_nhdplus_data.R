@@ -123,3 +123,37 @@ if(nrow(all_burn) > 0){
   }
 }
 
+
+# CatchmentSP --------------------------------------------------------------
+
+sp = grep("NHDPlusCatchment2", epa$Key, value =TRUE)
+
+all_sp = data.frame(
+  key = sp,
+  VPU = sapply(strsplit(sp, "_"), `[`, 3),
+  region = sapply(strsplit(sp, "_"), `[`, 2),
+  version = sapply(strsplit(sp, "_"), `[`, 5),
+  link = glue('https://{epa_bucket}.s3.amazonaws.com/{sp}')) |>
+  mutate(outfile = glue("{epa_download}NHDPlusCatchment2{VPU}.7z"),
+         sp_shp  = glue("{epa_download}NHDPlus{region}/NHDPlus{VPU}/NHDPlusCatchment/CatchmentSP.shp")) %>%
+  filter(!sp_shp %in% list.files(epa_download, recursive  = TRUE, pattern = ".shp$"))
+
+for(i in 1:nrow(all_sp)){
+  save_object(object = all_sp$key[i], bucket = epa_bucket, file = all_sp$outfile[i])
+  archive_extract(all_sp$outfile[i], dir = epa_download)
+  unlink(all_sp$outfile[i])
+  log_info("Downloaded and extracted ", all_sp$VPU[i])
+}
+
+all_sp = all_sp %>%
+  mutate(sp_gpkg = paste0(sp_dir, "/NHDPlus", VPU, ".gpkg")) %>%
+  filter(!sp_gpkg %in% list.files(ble_dir, full.names = TRUE))
+
+if(nrow(all_sp) > 0){
+  calls = paste('ogr2ogr -f GPKG -nlt MULTILINESTRING', all_sp$sp_gpkg, all_sp$sp_shp)
+  
+  for(i in 1:length(calls)){
+    system(calls[i])
+    message(i)
+  }
+}
