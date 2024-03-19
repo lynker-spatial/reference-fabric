@@ -156,11 +156,17 @@ list(
                 )
             }
 
-            sf::st_geometry(nhd)[check] <- do.call(c, new_geom[!error_index])
+            ng <- do.call(c, new_geom[!error_index])
+            switched <- sf::st_geometry(nhd)[check] != ng
+
+            sf::st_geometry(nhd)[check] <- ng
+            nhd$reversed <- switched
 
             nhd |>
                 dplyr::filter(COMID %in% rf_enhd$comid) |>
-                dplyr::select(-override_tocomid) |>
+                dplyr::select(-override_tocomid, -LENGTHKM) |>
+                dplyr::mutate(lengthkm = hydrofab::add_lengthkm(geom)) |>
+                sf::st_cast("LINESTRING") |>
                 sf::write_sf(rf_fl_outfile, "flowlines")
 
             rf_fl_outfile

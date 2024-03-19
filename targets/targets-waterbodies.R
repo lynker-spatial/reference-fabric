@@ -29,7 +29,8 @@ list(
             # Drop Z/M dimensions
             wb <- cbind(tmp, sf::st_geometry(wb)) |>
                   sf::st_as_sf() |>
-                  sf::st_zm()
+                  sf::st_zm() |>
+                  sf::st_make_valid()
 
             # Union polygons by the COMID attribute and transform to
             # EPSG code 5070
@@ -110,6 +111,8 @@ list(
                 out,
                 area_sqkm = hydrofab::add_areasqkm(out)
             ) |>
+                sf::st_make_valid() |>
+                sf::st_cast("POLYGON") |>
                 sf::write_sf(rf_wb_outfile, "waterbodies")
 
             rf_wb_outfile
