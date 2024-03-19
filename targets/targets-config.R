@@ -28,7 +28,7 @@ list(
 
     # Other options
     targets::tar_target(config_epa_bucket, "dmap-data-commons-ow"),
-    targets::tar_target(config_simplify_keep, .20),
+    targets::tar_target(config_simplify_keep, .25),
     targets::tar_target(config_facfdr_crs, paste("+proj=aea", "+lat_0=23", "+lon_0=-96", "+lat_1=29.5", "+lat_2=45.5", "+x_0=0", "+y_0=0", "+datum=NAD83", "+units=m", "+no_defs")),
     tar_file_path(config_enhd, config_dir_base, "enhd_nhdplusatts.parquet"),
     tar_file_path(config_ble_gdb, config_dir_base, "NHDPlusNationalData", "NHDPlusV21_National_Seamless_Flattened_Lower48.gdb")
