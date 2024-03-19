@@ -54,7 +54,8 @@ for(i in 1:length(all)){
       st_as_sf(
         cbind(tmp, st_geometry(wb))
         )
-      )
+      ) %>% 
+      st_make_valid()
     
     # Union polygons by the COMID attribute and transform to EPSG code 5070
     xx = 
@@ -100,14 +101,15 @@ for(i in 1:length(all)){
           select(GNIS_ID, GNIS_NAME, COMID, FTYPE, member_comid) %>%
           mutate(area_sqkm = add_areasqkm(.))
         
-        
       }
       
+    out = st_make_valid(out) |>
+      st_cast("POLYGON")
+
     # Write the resulting data to a new ".gpkg" file
     write_sf(out, outfile, "waterbodies")
 
-
-  logger::log_info("Finished VPU ", which_VPU, " waterbodies")
+   logger::log_info("Finished VPU ", which_VPU, " waterbodies")
   
   }
   

@@ -117,6 +117,7 @@ for(i in 1:length(fl_paths)){
   if(!file.exists(outfile)){
     
     # Read flowlines from file, join with VAA and new_atts
+    # 
     nhd <- 
       fl_path %>%
       read_sf() %>% 
@@ -262,17 +263,21 @@ for(i in 1:length(fl_paths)){
     message("Replacing NHD flowline geometries with directionaly correct flowline geometries...")
     
     # Replace the geometry in 'nhd' with the corrected geometries
-    st_geometry(nhd)[check] <- do.call(c, new_geom[!error_index])
+    ng = do.call(c, new_geom[!error_index])
+    switched = st_geometry(nhd)[check] != ng
+
+    st_geometry(nhd)[check] <- ng
+    nhd$reversed = switched
   
     # Filter nhd on COMIDs in new_atts and save out result to output file
     logger::log_info("Saving VPU ", which_VPU, " flowlines to:\n--> {outfile}")
     
-    nhd %>% 
-      filter(COMID %in% new_atts$comid) %>%
-      select(-override_tocomid)  %>% 
-      mutate(lengthkm  = hydrofab::add_lengthkm(.)) %>% 
+    nhd |> 
+      filter(COMID %in% new_atts$comid) |>
+      select(-override_tocomid)  |> 
+      mutate(lengthkm  = hydrofab::add_lengthkm(.)) |>
+      st_cast("LINESTRING") |>
       write_sf(outfile, "flowlines")
-    
   
   }
 
