@@ -68,17 +68,20 @@ list(
             for (layer in layers) {
                 dplyr::filter(.tbl, type == layer) |>
                     dplyr::pull(path) |>
-                    sf::read_sf() |>
-                    sf::st_transform(5070) |>
-                    sf::write_sf(
-                        outfile,
-                        layer = layer,
-                        append = exists[[layer]]
-                    )
+                    lapply(FUN = sf::read_sf) |>
+                    lapply(FUN = sf::st_transform, crs = 5070) |>
+                    lapply(FUN = function(x) {
+                        sf::write_sf(
+                            x,
+                            outfile,
+                            layer = layer,
+                            append = exists[[layer]]
+                        )
 
-                if (!exists[[layer]]) {
-                    exists[[layer]] <- TRUE
-                }
+                        if (!exists[[layer]]) {
+                            exists[[layer]] <<- TRUE
+                        }
+                    })
             }
 
             outfile

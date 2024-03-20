@@ -40,11 +40,10 @@ list(
                 nhdplusTools::align_nhdplus_names() |>
                 dplyr::mutate(LENGTHKM = hydrofab::add_lengthkm(geom))
 
-            cats <- grep(
+            cats <- rf_cat_out[grep(
                 pattern = rf_extract_vpu(rf_nhdplus_fl_path),
-                x       = rf_cat_out,
-                value   = TRUE
-            ) |>
+                x       = basename(rf_cat_out)
+            )] |>
                 sf::read_sf() |>
                 sf::st_transform(5070)
 
@@ -157,7 +156,8 @@ list(
             }
 
             ng <- do.call(c, new_geom[!error_index])
-            switched <- sf::st_geometry(nhd)[check] != ng
+            switched <- FALSE
+            switched[check] <- sf::st_geometry(nhd)[check] != ng
 
             sf::st_geometry(nhd)[check] <- ng
             nhd$reversed <- switched

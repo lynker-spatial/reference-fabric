@@ -72,13 +72,15 @@ rf_extract_vpu <- function(path) {
         rf_str_rm(".gpkg")
 }
 
-rf_download_enhd <- function(outfile) {
-    sb_id <- "63cb311ed34e06fef14f40a3"
-    sbtools::item_file_download(
-        sb_id,
-        names = basename(outfile),
-        destinations = outfile
-    )
+rf_download_enhd <- function(outfile, force = FALSE) {
+    if (!file.exists(outfile) || force) {
+        sb_id <- "63cb311ed34e06fef14f40a3"
+        sbtools::item_file_download(
+            sb_id,
+            names = basename(outfile),
+            destinations = outfile
+        )
+    }
     outfile
 }
 
@@ -233,7 +235,7 @@ rf_clean_catchment <- function(catchment_path, flowpath_path, outfile, keep = 0.
 rf_find_file_path = function(VPU, files, new_dir){
   f <- grep(VPU, basename(files))
   tmp01 <- files[f]
-  tmp02 <- paste0(new_dir,  basename(files[f]))
+  tmp02 <- file.path(new_dir,  basename(files[f]))
 
   if (!file.exists(tmp02)){
     logger::log_info("\tCopying ", VPU, " to reference.")

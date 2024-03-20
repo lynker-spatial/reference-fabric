@@ -9,15 +9,15 @@ targets::tar_option_set(
         "nngeo", "vctrs", "foreach", "yyjsonr", "dplyr"
     ),
     memory = "transient",
-    garbage_collection = TRUE,
-    controller = crew::crew_controller_local(
-        workers         = 3L,
-        seconds_idle    = 10L,
-        launch_max      = Inf,
-        seconds_timeout = 30,
-        seconds_launch  = 60L,
-        garbage_collection = TRUE
-    )
+    garbage_collection = TRUE #,
+    # controller = crew::crew_controller_local(
+    #     workers         = 3L,
+    #     seconds_idle    = 10L,
+    #     launch_max      = Inf,
+    #     seconds_timeout = 30,
+    #     seconds_launch  = 60L,
+    #     garbage_collection = TRUE
+    # )
 )
 
 #' Load targets from a file

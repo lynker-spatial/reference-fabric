@@ -101,7 +101,8 @@ list(
             pattern = config_dir_waterbodies,
             x = vctrs::vec_c(rf_nhdplus_gpkg),
             value = TRUE
-        )
+        ) |>
+            Filter(f = \(x) !rf_extract_vpu(x) %in% c("20", "21", "22AS", "22GU", "22MP"))
     ),
 
     targets::tar_target(
@@ -110,7 +111,8 @@ list(
             pattern = config_dir_flowlines,
             x = vctrs::vec_c(rf_nhdplus_gpkg),
             value = TRUE
-        )
+        ) |>
+            Filter(f = \(x) !rf_extract_vpu(x) %in% c("20", "21", "22AS", "22GU", "22MP"))
     ),
 
     targets::tar_target(
@@ -119,7 +121,8 @@ list(
             pattern = config_dir_catchments,
             x = vctrs::vec_c(rf_nhdplus_gpkg),
             value = TRUE
-        )
+        ) |>
+            Filter(f = \(x) !rf_extract_vpu(x) %in% c("20", "21", "22AS", "22GU", "22MP"))
     ),
 
     targets::tar_target(
@@ -128,6 +131,7 @@ list(
             pattern = config_dir_ble,
             x = vctrs::vec_c(rf_nhdplus_gpkg),
             value = TRUE
-        )
+        ) |>
+            Filter(f = \(x) !rf_extract_vpu(x) %in% c("20", "21", "22AS", "22GU", "22MP"))
     )
 )
