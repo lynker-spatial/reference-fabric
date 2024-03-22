@@ -25,6 +25,7 @@ list(
                 rf_nhdplus_fl_path |>
                 sf::read_sf() |>
                 rf_geometry_drop_zm() |>
+                sf::st_transform(5070) |>
                 nhdplusTools::align_nhdplus_names() |>
                 dplyr::left_join(rf_vaa, by = c("COMID" = "comid")) |>
                 dplyr::select(
@@ -147,7 +148,7 @@ list(
                 )
             }
 
-            check[which(nhd %in% errors$COMID)] <- FALSE
+            check[which(nhd$COMID %in% errors$COMID)] <- FALSE
 
             if (!all(sapply(sf::st_geometry(errors), sf::st_is_empty))) {
                 targets::tar_throw_validate(
@@ -156,11 +157,26 @@ list(
             }
 
             ng <- do.call(c, new_geom[!error_index])
-            switched <- FALSE
-            switched[check] <- sf::st_geometry(nhd)[check] != ng
 
+            ng_direction <- ng |>
+                (\(geom) lwgeom::st_endpoint(geom) - lwgeom::st_startpoint(geom))() |>
+                sf::st_coordinates()
+            colnames(ng_direction) <- c("X1", "Y1")
+
+            nhd_direction <- sf::st_geometry(nhd)[check] |>
+                (\(geom) lwgeom::st_endpoint(geom) - lwgeom::st_startpoint(geom))() |>
+                sf::st_coordinates()
+            colnames(nhd_direction) <- c("X2", "Y2")
+
+            switched <-
+                cbind(ng_direction, -nhd_direction) |>
+                rowSums() |>
+                abs() |>
+                (\(x) x >= 1e-5)()
+
+            nhd$reversed <- FALSE
+            nhd$reversed[check] <- switched
             sf::st_geometry(nhd)[check] <- ng
-            nhd$reversed <- switched
 
             nhd |>
                 dplyr::filter(COMID %in% rf_enhd$comid) |>
