@@ -6,7 +6,7 @@ targets::tar_option_set(
     packages = c(
         "hydrofab", "nhdplusTools", "glue", "logger", "archive",
         "rmapshaper", "aws.s3", "sbtools", "sfheaders", "arrow",
-        "nngeo", "vctrs", "foreach"
+        "nngeo", "vctrs", "foreach", "yyjsonr", "dplyr"
     ),
     memory = "transient",
     garbage_collection = TRUE,

@@ -56,7 +56,6 @@ final_dir  = glue('{base_dir}/reference_features/')
   dir.create(final_dir,      showWarnings = FALSE, recursive = TRUE)
 
 
-
 find_file_path = function(VPU, files, new_dir){
   f = grep(VPU, basename(files))
   tmp01 = files[f]
