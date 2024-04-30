@@ -67,120 +67,39 @@ list(
                     v_path_2 <-
                         rf_find_file_path(VPU2, rf_cat_file, config_dir_reference)
 
-                    v1 <- sf::read_sf(v_path_1) |>
-                        sf::st_transform(5070) |>
-                        nhdplusTools::rename_geometry("geometry") |>
-                        sf::st_make_valid()
+                    vpu_div_1 <-
+                        sf::read_sf(v_path_1, "catchments") |>
+                        dplyr::mutate(vpuid = VPU1)
 
-                    v2 <- sf::read_sf(v_path_2) |>
-                        sf::st_transform(5070) |>
-                        nhdplusTools::rename_geometry("geometry") |>
-                        sf::st_make_valid()
+                    vpu_div_2 <-
+                        sf::read_sf(v_path_2, "catchments") |>
+                        dplyr::mutate(vpuid = VPU2)
 
-                    old_1 <- sf::st_filter(v1, v2)
-                    old_2 <- sf::st_filter(v2, v1)
+                    tmpfile <- tempfile(pattern = "rf_cat_rectify_borders", fileext = ".geojson")
 
-                    new_1 <- sf::st_union(sf::st_combine(old_2)) |>
-                            sf::st_difference(x = old_1)
+                    yyjsonr::write_geojson_file(
+                        dplyr::bind_rows(vpu_div_1, vpu_div_2),
+                        tmpfile
+                    )
 
-                    new_2 <- sf::st_union(sf::st_combine(old_1)) |>
-                            sf::st_difference(x = old_2)
+                    system2(
+                        "mapshaper",
+                        args = c(tmpfile, "-clean", "-o", "force", tmpfile)
+                    )
 
-                    rm(old_1, old_2)
-
-                    new_1 <- sf::st_filter(v1, new_1)
-                    new_2 <- sf::st_filter(v2, new_2)
-
-                    u1 <- new_1 |>
-                        sf::st_make_valid() |>
-                        sf::st_union() |>
-                        sfheaders::sf_remove_holes() |>
-                        nngeo::st_remove_holes()
-
-                    u2 <- new_2 |>
-                        sf::st_make_valid() |>
-                        sf::st_union() |>
-                        sfheaders::sf_remove_holes() |>
-                        nngeo::st_remove_holes()
-
-                    base_cats <- dplyr::bind_rows(new_1, new_2) |>
-                                sf::st_as_sf() |>
-                                sf::st_make_valid()
-
-                    base_union <- sf::st_union(c(u1, u2)) |>
-                                sfheaders::sf_remove_holes() |>
-                                sf::st_make_valid()
-
-                    rm(new_1, new_2, u1, u2)
-                
-                    frags <-
-                        sf::st_combine(base_cats) |>
-                        sf::st_union() |>
-                        sf::st_make_valid() |>
-                        sf::st_difference(x = base_union) |>
-                        sf::st_cast("MULTIPOLYGON") |>
-                        sf::st_cast("POLYGON") |>
-                        sf::st_as_sf() |>
-                        dplyr::mutate(id = seq_len(dplyr::n())) |>
-                        nhdplusTools::rename_geometry("geometry") |>
-                        sf::st_buffer(0.0001)
-
-                    out <- sf::st_intersection(frags, base_cats) |>
-                        sf::st_collection_extract("POLYGON")
-
-                    ints <- out |>
-                            dplyr::mutate(l = sf::st_area(out)) |>
-                            dplyr::group_by(id) |>
-                            dplyr::slice_max(l, with_ties = FALSE) |>
-                            dplyr::ungroup() |>
-                            dplyr::select(featureid, id, l) |>
-                            sf::st_drop_geometry()
-
-                    rm(base_union, out)
-
-                    tj <-
-                        dplyr::right_join(frags, ints, by = "id") |>
-                        dplyr::bind_rows(base_cats) |>
-                        dplyr::select(-id) |>
-                        dplyr::group_by(featureid) |>
-                        dplyr::mutate(n = dplyr::n()) |>
-                        dplyr::ungroup()
-
-                    rm(frags, base_cats, ints)
-
-                    in_cat <-
-                        dplyr::filter(tj, n > 1) |>
-                        hydrofab::union_polygons("featureid") |>
-                        dplyr::bind_rows(
-                            dplyr::filter(tj, n == 1) |>
-                                dplyr::select(featureid)
-                        ) |>
-                        dplyr::mutate(tmpID = seq_len(dplyr::n())) |>
-                        sf::st_make_valid()
-
-                    inds <- in_cat$featureid[in_cat$featureid %in% v1$featureid]
+                    new <-
+                        yyjsonr::read_geojson_file(tmpfile) |>
+                        sf::st_set_crs(sf::st_crs(vpu_div_1)) |>
+                        dplyr::select(featureid, vpuid) |>
+                        dplyr::mutate(areasqkm = hydrofab::add_areasqkm(geometry))
 
                     # to_keep_1
-                    dplyr::bind_rows(
-                        dplyr::filter(v1, !featureid %in% inds),
-                        dplyr::filter(in_cat, featureid %in% inds)
-                    ) |>
-                        dplyr::select(names(v1)) |>
-                        dplyr::mutate(areasqkm = hydrofab::add_areasqkm(geometry)) |>
+                    dplyr::filter(new, vpuid == VPU1) |>
                         sf::write_sf(v_path_1, layer = "catchments", append = FALSE)
 
-                    inds <- in_cat$featureid[in_cat$featureid %in% v2$featureid]
-
                     # to_keep_2
-                    dplyr::bind_rows(
-                        dplyr::filter(v2, !featureid %in% inds),
-                        dplyr::filter(in_cat, featureid %in% inds)
-                    ) |>
-                        dplyr::select(names(v2)) |>
-                        dplyr::mutate(areasqkm = hydrofab::add_areasqkm(geometry)) |>
+                    dplyr::filter(new, vpuid == VPU2) |>
                         sf::write_sf(v_path_2, layer = "catchments", append = FALSE)
-
-                    rm(in_cat, inds)
                 }
             }
 
