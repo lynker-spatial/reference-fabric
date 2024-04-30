@@ -188,8 +188,7 @@ for(i in 1:length(fl_paths)){
 
     # is a headwater and for sure flows to something, where COMID is not in override_tocomid
     check <- !nhd$COMID %in% nhd$override_tocomid &
-      !(nhd$override_tocomid == 0 | is.na(nhd$override_tocomid) |
-          !nhd$override_tocomid %in% nhd$COMID)
+      !(nhd$override_tocomid == 0 | is.na(nhd$override_tocomid) | !nhd$override_tocomid %in% nhd$COMID)
     
     # filter nhd based on the check condition above
     check_direction <- filter(nhd, check)

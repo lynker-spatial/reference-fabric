@@ -1,4 +1,5 @@
 library("hydrofab")
+library("dplyr")
 library("nhdplusTools")
 library("glue")
 library("logger")
@@ -14,17 +15,17 @@ library("nngeo")
 
 sf_use_s2(FALSE)
 
-source("reference-features/nhdplusv2/root_dir.R")
+source("workspace/reference-features/nhdplusv2/root_dir.R")
 
 vpus =  vpu_boundaries[1:21,]
 n    =  'enhd_nhdplusatts.parquet'
 enhd =  glue("{base_dir}/{n}")
 
-vpu_topo_csv = "data/vpu_topology.csv"
+vpu_topo_csv = "workspace/reference-features/nhdplusv2/data/vpu_topology.csv"
 
 facfdr_crs = '+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'
 
-num        = .25
+num = .25
 
 par = 3
 
@@ -43,11 +44,13 @@ wb_dir         = glue('{base_dir}/02_Waterbodies/')
   dir.create(wb_dir,         showWarnings = FALSE, recursive = TRUE)
 ble_dir        = glue('{base_dir}/02_BLE/')
   dir.create(ble_dir,        showWarnings = FALSE, recursive = TRUE)
-cleaned_dir    = glue('{base_dir}/03_cleaned_catchments/')
-  dir.create(cleaned_dir,    showWarnings = FALSE, recursive = TRUE)
+sp_dir        = glue('{base_dir}/02_CatchmentsSP/')
+  dir.create(sp_dir,        showWarnings = FALSE, recursive = TRUE)
 simplified_dir = glue('{base_dir}/03_simplified_catchments/')
   dir.create(simplified_dir, showWarnings = FALSE, recursive = TRUE)
-reference_dir  = glue('{base_dir}/04_reference_geometries/')
+# cleaned_dir    = glue('{base_dir}/04_cleaned_catchments/')
+#   dir.create(cleaned_dir,    showWarnings = FALSE, recursive = TRUE)
+reference_dir  = glue('{base_dir}/05_reference_geometries/')
   dir.create(reference_dir,  showWarnings = FALSE, recursive = TRUE)
 final_dir  = glue('{base_dir}/reference_features/')
   dir.create(final_dir,      showWarnings = FALSE, recursive = TRUE)

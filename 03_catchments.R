@@ -1,13 +1,13 @@
-source('reference-features/nhdplusv2/config.R')
+source('workspace/reference-features/nhdplusv2/config.R')
 
 files  = list.files(catchments_dir, full.names = TRUE, pattern = ".gpkg$")
-out_geojson = gsub('gpkg', 'geojson', glue('{cleaned_dir}{gsub("NHDPlus", "cleaned_", basename(files))}'))
-flowpath_files = list.files(fl_dir,  full.names = TRUE, pattern = ".gpkg$")
-out_geojson = gsub('gpkg', 'geojson', glue('{cleaned_dir}{gsub("NHDPlus", "cleaned_", basename(files))}'))
-out_tmp  = glue("{simplified_dir}{gsub('.geojson', '', gsub('cleaned', 'catchments', basename(out_geojson)))}.geojson")
-out_gpkg = gsub('geojson', "gpkg", out_tmp)
 
-# Clean files -------------------------------------------------------------
+flowpath_files = list.files(fl_dir,  full.names = TRUE, pattern = ".gpkg$")
+
+out_gpkg    = glue("{simplified_dir}{gsub('NHDPlus', 'catchments_', basename(files))}")
+out_geojson = glue("{simplified_dir}{gsub('NHDPlus', 'catchments_', basename(files))}")
+
+# Simplify files -------------------------------------------------------------
 
 for(i in 1:length(files)){
 
@@ -22,9 +22,9 @@ for(i in 1:length(files)){
      # clean geometries, dissolve internal bounds
      out = hydrofab::clean_geometry(
                          catchments = catchments,
-                         flowlines = flowlines,
+                         flowlines  = flowlines,
                          ID         = "featureid",
-                         fl_ID     = "comid",
+                         fl_ID      = "comid",
                          keep       = num,
                          sys        = TRUE)
       write_sf(out, out_gpkg[i], "catchments")
@@ -33,169 +33,91 @@ for(i in 1:length(files)){
    message("Finished ", i, " of ", length(files))
 }
 
-# Rectify borders ---------------------------------------------------------
+# Clean borders ---------------------------------------------------------
+
+tmpfile = glue('{reference_dir}/interm.geojson')
+topos = read.csv(vpu_topo_csv)
 
 for(i in 1:nrow(topos)){
 
   VPU1 = topos$VPU1[i]
   VPU2 = topos$VPU2[i]
 
-  v_path_1 = find_file_path(VPU1, out_gpkg, reference_dir)
-  v_path_2 = find_file_path(VPU2, out_gpkg, reference_dir)
-
-  log_info('\tRead in touching pairs')
-
-  v1 = read_sf(v_path_1) |>
-    st_transform(5070) |>
-    #st_make_valid() |>
-    rename_geometry('geometry')
-
-  v2 = read_sf(v_path_2) |>
-    st_transform(5070) |>
-    #st_make_valid() |>
-    rename_geometry('geometry')
-
-  log_info('\tIsolate "edge" catchments')
-  old_1 = st_filter(v1, v2)
-  old_2 = st_filter(v2, v1)
-
-  log_info('\tErase fragments of OVERLAP')
-  new_1 = st_difference(old_1, st_union(st_combine(old_2)))
-  new_1 = st_filter(v1, new_1)
-  new_2 = st_difference(old_2, st_union(st_combine(old_1)))
-  new_2 = st_filter(v2, new_2)
-
-  u1 = sfheaders::sf_remove_holes(st_union(st_make_valid(new_1))) %>% 
-    nngeo::st_remove_holes()
-  u2 = sfheaders::sf_remove_holes(st_union(st_make_valid(new_2)))%>% 
-    nngeo::st_remove_holes()
-
-  log_info('\tBuild Fragments')
-
-  base_cats = bind_rows(new_1, new_2) %>%
-    st_make_valid()
-
-  base_union = sfheaders::sf_remove_holes(st_union(c(u1,u2))) %>%
-    st_make_valid()
-
-  frags = st_difference(base_union, st_make_valid(st_union(st_combine(base_cats)))) |>
-    st_cast("MULTIPOLYGON") |>
-    st_cast("POLYGON") |>
-    st_as_sf() |>
-    mutate(id = 1:n()) %>%
-    rename_geometry('geometry') |>
-    st_buffer(.0001)
-
-  out = tryCatch({
-    suppressWarnings({
-      st_intersection(frags, base_cats) %>%
-        st_collection_extract("POLYGON")
-    })
-  }, error = function(e) { NULL })
-
-
-  ints = out %>%
-    mutate(l = st_area(.)) %>%
-    group_by(id) %>%
-    slice_max(l, with_ties = FALSE) %>%
-    ungroup() %>%
-    select(featureid, id, l) %>%
-    st_drop_geometry()
-
-  tj = right_join(frags,
-                  ints,
-                  by = "id") %>%
-    bind_rows(base_cats) %>%
-    dplyr::select(-.data$id) %>%
-    group_by(featureid) %>%
-    mutate(n = n()) %>%
-    ungroup()
-
-  in_cat = suppressWarnings({
-    hydrofab::union_polygons(filter(tj, n > 1) , 'featureid') %>%
-      bind_rows(dplyr::select(filter(tj, n == 1), featureid)) %>%
-      mutate(tmpID = 1:n()) |>
-      st_make_valid()
+  v_path_1 = find_file_path(VPU1, out_gpkg, cleaned_dir)
+  v_path_2 = find_file_path(VPU2, out_gpkg, cleaned_dir)
+  
+  vpu_div_1 = read_sf(v_path_1, "catchments") %>% 
+    mutate(vpuid = VPU1)
+  
+  vpu_div_2 = read_sf(v_path_2, "catchments") %>% 
+    mutate(vpuid = VPU2)
+  
+  unlink(tmpfile)
+  
+  write_geojson_file(bind_rows(vpu_div_1, vpu_div_2), tmpfile)
+  
+  system(glue("mapshaper {tmpfile} -clean -o force {tmpfile}"))
+  
+  suppressWarnings({
+    new  <- st_set_crs(read_geojson_file(tmpfile), st_crs(vpu_div_1)) %>% 
+      select(featureid, vpuid) %>% 
+      mutate(areasqkm = add_areasqkm(.))
   })
-
-  log_info('\tReassemble VPUS')
-
-  inds = in_cat$featureid[in_cat$featureid %in% v1$featureid]
-
-  to_keep_1 = bind_rows( filter(v1, !featureid %in% inds),
-                         filter(in_cat, featureid %in% inds)) |>
-    select(names(v1)) %>%
-    mutate(areasqkm = add_areasqkm(.)) #%>%
-    #st_remove_holes()
-
-  inds2 = in_cat$featureid[in_cat$featureid %in% v2$featureid]
-
-  to_keep_2 = bind_rows( filter(v2, !featureid %in% inds2),
-                         filter(in_cat, featureid %in% inds2)) |>
-    select(names(v1)) %>%
-    mutate(areasqkm = add_areasqkm(.)) #%>%
-   # st_remove_holes()
-
-  log_info('\tWrite VPUS')
-  write_sf(to_keep_1, v_path_1, "catchments", overwrite = TRUE)
-  write_sf(to_keep_2, v_path_2, "catchments", overwrite = TRUE)
+  
+  write_sf(filter(new, vpuid == VPU1), v_path_1, "catchments", overwrite = TRUE)
+  write_sf(filter(new, vpuid == VPU2), v_path_2, "catchments", overwrite = TRUE)
 
   log_info('Finished: ', i , " of ", nrow(topos))
 
 }
 
+unlink(tmpfile)
+
 #######################################################################
+cleaned_dir = glue('{dir}/clean/')
 
+files = list.files(cleaned_dir, full.names = TRUE, pattern = "gpkg$") 
 
-files = list.files(reference_dir, full.names = TRUE, pattern = "gpkg$") 
-files = grep("catchments", files, value = TRUE)
-
-for(i in 1:length(files)){
-  
-  cats = read_sf(files[i])  %>% 
-    lwgeom::st_snap_to_grid(size = .0009) %>% 
-    hydrofab:::fast_validity_check()
+for(i in 1:length(files)) {
+  cats = read_sf(files[i])
   
   imap = st_within(cats)
   
   df = data.frame(
-    within = rep(cats$featureid, times = lengths(imap)),
-    featureid = cats$featureid[unlist(imap)]
-  ) %>% 
+    within    = rep(cats$featureid, times = lengths(imap)),
+    featureid = cats$featureid[unlist(imap)]) |>
     filter(featureid != within)
   
-  d = list()
-  u = unique(df$featureid)
+  d <- list()
+  u <- unique(df$featureid)
   
-  for(j in 1:length(u)){
-    d[[j]] = st_difference(
-      filter(cats, featureid %in% u[j]),
-      st_make_valid(st_combine(filter(cats, featureid %in% filter(df, featureid == u[j])$within))),
-    )
+  if (length(u) > 0) {
+    message("Islands found in: ", basename(files[i]))
+    for (j in 1:length(u)) {
+      d[[j]] <- st_difference(filter(cats, featureid %in% u[j]),
+                             st_make_valid(st_combine(
+                               filter(cats, featureid %in% filter(df, featureid == u[j])$within)
+                             )),)
+    }
+    
+    cats1 <- bind_rows(d)
+    
+    cats2 = filter(cats, !featureid %in% unlist(df)) %>%
+      bind_rows(cats1)
+    
+    cats3 = filter(cats,
+                   featureid %in% filter(df, !within %in% cats2$featureid)$within) %>%
+      bind_rows(cats2) %>%
+      st_cast("POLYGON") %>%
+      mutate(areasqkm = add_areasqkm(.))
+    
+    log_info('\tWrite VPUS: ', basename(files[i]))
+    
+    stopifnot(nrow(cats3) == nrow(cats))
+    
+    write_sf(cats3, files[i], "catchments", overwrite = TRUE)
+    
   }
-
-  cats1 = bind_rows(d)
-  
-  cats2 = filter(cats, !featureid %in% unlist(df)) %>% 
-    bind_rows(cats1)
-  
-  cats3 = filter(cats, featureid %in% filter(df, !within %in% cats2$featureid)$within) %>% 
-    bind_rows(cats2) %>% 
-    st_cast("POLYGON") %>% 
-    mutate(areasqkm = hydrofab::add_areasqkm(.))
-  
-  log_info('\tWrite VPUS: ', basename(files[i]))
-  
-  stopifnot(nrow(cats3) == nrow(cats))
-  
-  write_sf(cats3, files[i], "catchments", overwrite = TRUE)
-  
 }
 
 ####################################################################
-
-
-
-
-
-
