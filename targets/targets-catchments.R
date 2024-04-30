@@ -93,6 +93,8 @@ list(
                         dplyr::select(featureid, vpuid) |>
                         dplyr::mutate(areasqkm = hydrofab::add_areasqkm(geometry))
 
+                    unlink(tmpfile)
+
                     # to_keep_1
                     dplyr::filter(new, vpuid == VPU1) |>
                         sf::write_sf(v_path_1, layer = "catchments", append = FALSE)
