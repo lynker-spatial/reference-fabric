@@ -90,7 +90,7 @@ list(
                     new <-
                         yyjsonr::read_geojson_file(tmpfile) |>
                         sf::st_set_crs(sf::st_crs(vpu_div_1)) |>
-                        dplyr::select(featureid, vpuid) |>
+                        dplyr::select(featureid, vpuid, geometry) |>
                         dplyr::mutate(areasqkm = hydrofab::add_areasqkm(geometry))
 
                     unlink(tmpfile)
@@ -116,11 +116,7 @@ list(
     tar_target(
         rf_cat_out,
         {
-            cats <-
-                sf::read_sf(rf_cat_rectify_borders) |>
-                lwgeom::st_snap_to_grid(size = .0009) |>
-                hydrofab:::fast_validity_check()
-
+            cats <- sf::read_sf(rf_cat_rectify_borders)
             imap <- sf::st_within(cats)
 
             df <- data.frame(
@@ -129,22 +125,26 @@ list(
             ) |>
                 dplyr::filter(featureid != within)
 
-            d <- lapply(unique(df$featureid), FUN = function(id) {
-                dplyr::filter(
-                    cats,
-                    featureid %in% dplyr::filter(df, featureid == id)$within
-                ) |>
-                    sf::st_combine() |>
-                    sf::st_make_valid() |>
-                    sf::st_difference(
-                        x = dplyr::filter(cats, featureid == id)
-                    )
-            }) |>
-                dplyr::bind_rows() |>
-                sf::st_as_sf()
+            cats2 <- dplyr::filter(cats, !featureid %in% unlist(df))
 
-            cats2 <- dplyr::filter(cats, !featureid %in% unlist(df)) |>
-                     dplyr::bind_rows(d)
+            if (nrow(df) > 0) {
+
+                d <- lapply(unique(df$featureid), FUN = function(id) {
+                    dplyr::filter(
+                        cats,
+                        featureid %in% dplyr::filter(df, featureid == id)$within
+                    ) |>
+                        sf::st_combine() |>
+                        sf::st_make_valid() |>
+                        sf::st_difference(
+                            x = dplyr::filter(cats, featureid == id)
+                        )
+                }) |>
+                    dplyr::bind_rows() |>
+                    sf::st_as_sf(d)
+
+                cats2 <- dplyr::bind_rows(cats2, d)
+            }
 
             dplyr::filter(
                 cats,
