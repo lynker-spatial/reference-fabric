@@ -7,7 +7,7 @@
 make_fabric(...)
 }
 \arguments{
-\item{...}{Additional arguments passed to \link[targets:tar_make]{targets::tar_make}.}
+\item{...}{Additional arguments passed to \link[targets]{tar_make}.}
 }
 \description{
 Make Reference Fabric
