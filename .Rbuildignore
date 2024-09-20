@@ -1,2 +1,4 @@
 ^LICENSE\.md$
-^reference-fabric\.Rproj$
+^reference\.fabric\.Rproj$
+^_targets$
+^\.Rprofile$

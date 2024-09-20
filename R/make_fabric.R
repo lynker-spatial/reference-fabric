@@ -1,5 +1,5 @@
 #' Make Reference Fabric
-#' @param ... Additional arguments passed to [targets::tar_make].
+#' @param ... Additional arguments passed to \link[targets]{tar_make}.
 #' @export
 make_fabric <- function(...) {
   args <- list(...)

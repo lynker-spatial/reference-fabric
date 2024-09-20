@@ -25,15 +25,17 @@ rf.targets.get_topology <- function() {
 
 #' @export
 rf.targets.get_enhd <- function(outfile) {
-  sb_id <- "63cb311ed34e06fef14f40a3"
-  sb_name <- "enhd_nhdplusatts.parquet"
+  if (!file.exists(outfile)) {
+    sb_id <- "63cb311ed34e06fef14f40a3"
+    sb_name <- "enhd_nhdplusatts.parquet"
 
-  sbtools::item_file_download(
-    sb_id,
-    names = sb_name,
-    destinations = outfile,
-    overwrite_file = TRUE
-  )
+    sbtools::item_file_download(
+      sb_id,
+      names = sb_name,
+      destinations = outfile,
+      overwrite_file = TRUE
+    )
+  }
 
   outfile
 }
@@ -128,6 +130,8 @@ rf.targets.convert_nhd <- function(shp, .tbl) {
     stop("Invalid shapefile path: ", shp)
   }
 
+  rf.utils.ensure_directory(dirname(fgb))
+
   sf::gdal_utils(
     "vectortranslate",
     shp,
@@ -135,7 +139,9 @@ rf.targets.convert_nhd <- function(shp, .tbl) {
     options = c(
       "-f", "FlatGeobuf",
       "-makevalid",
-      "-nlt", "PROMOTE_TO_MULTI"
+      "-where", "\"_ogr_geometry_\" is not null",
+      "-nlt", "PROMOTE_TO_MULTI",
+      "-overwrite"
     )
   )
 

@@ -1,7 +1,7 @@
 library(targets)
 
 # Pipeline Configuration Options ----------------------------------------------
-rf.config.dir.base          <- getOption("rf.config.dir.base", "reference-fabric")
+rf.config.dir.base          <- getOption("rf.config.dir.base", "reference_fabric")
 rf.config.dir.data          <- file.path(rf.config.dir.base, "00_data")
 rf.config.dir.epa           <- file.path(rf.config.dir.base, "01_epa")
 rf.config.dir.nhd           <- file.path(rf.config.dir.base, "02_nhd")
@@ -16,6 +16,14 @@ rf.config.epa_bucket        <- getOption("rf.config.epa_bucket", "dmap-data-comm
 rf.config.simplify_keep     <- getOption("rf.config.simplify_keep", 0.20)
 rf.config.facfdr_crs        <- getOption("rf.config.facfdr_crs", "+proj=aea +lat_0=23 +lon_0=-96 +lat_1=29.5 +lat_2=45.5 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs")
 # -----------------------------------------------------------------------------
+
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.data)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.epa)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.nhd)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.cleaned)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.simplified)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.reference)
+reference.fabric::rf.utils.ensure_directory(rf.config.dir.output)
 
 list(
   ## =============== Extract =============== ##
