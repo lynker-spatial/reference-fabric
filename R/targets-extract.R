@@ -132,6 +132,8 @@ rf.targets.convert_nhd <- function(shp, .tbl) {
 
   rf.utils.ensure_directory(dirname(fgb))
 
+  unlink(fgb)
+
   sf::gdal_utils(
     "vectortranslate",
     shp,

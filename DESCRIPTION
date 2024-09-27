@@ -1,21 +1,40 @@
 Package: reference.fabric
-Title: Automated Pipeline for Reference Fabric Creation
-Version: 0.0.0.9000
+Title: Hydrological Reference Fabric Tools
+Version: 0.1.0.9000
 Authors@R:
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"), comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+    c(person(given = "Mike",
+             family = "Johnson",
+             role = "aut",
+             email = "jjohnson@lynker.com",
+             comment = c(ORCID = "0000-0002-5288-8350")),
+      person(given = "Justin",
+             family = "Singh-Mohudpur",
+             role = "cre",
+             email = "jsmohudpur@lynker.com",
+             comment = c(ORCID = "0000-0002-5233-5799")))
+Description: Development tools and `targets` pipeline for generating a national hydrological geospatial reference fabric.
+URL: https://github.com/lynker-spatial/reference.fabric
+BugReports: https://github.com/lynker-spatial/reference.fabric/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+SystemRequirements: mapshaper (https://github.com/mbloch/mapshaper/)
+Depends:
+    R (>= 4.1)
 Imports:
     archive,
     arrow,
     aws.s3,
     dplyr,
+    hydrofab,
     nhdplusTools,
+    rmapshaper,
     sbtools,
     sf,
     stats,
     targets,
-    utils
+    utils,
+    yyjsonr
+Remotes:
+    mikejohnson51/hydrofab
