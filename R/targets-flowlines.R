@@ -46,15 +46,15 @@ rf.targets.clean_flowlines <- function(flowlines_path, rf_cat_paths, rf_ble_path
   # with the BLE geometry (reducing the effective length by 150m).
 
   ble_comid <- sf::read_sf(rf_ble_path, query = "SELECT COMID FROM burnline_events")$COMID
-
-  rm(rf_ble_path)
-
+  
+  # Get the flowlines with a matching burn line event
   ble_options <-
     dplyr::filter(nhd, COMID %in% ble_comid) |>
     sf::st_transform(5070)
 
   rm(ble_comid)
-
+  
+  ## Convert matching flowlines' geometry to their starting node
   sf::st_geometry(ble_options) <-
     nhdplusTools::get_node(ble_options, "start") |>
     sf::st_geometry()
@@ -72,14 +72,21 @@ rf.targets.clean_flowlines <- function(flowlines_path, rf_cat_paths, rf_ble_path
   rm(ble_options)
   rm(imap)
 
-  ble <- dplyr::filter(nhd, COMID %in% df$start)
-  .matches <- match(df$start, nhd$COMID)
+  # Get corresponding burn line geometries
+  ble <- sf::read_sf(rf_ble_path, query = paste0(
+    "SELECT COMID, '_ogr_geometry_' AS geometry FROM burnline_events WHERE vpuid = '", rf.utils.extract_vpu(flowlines_path), "'"
+  )) |>
+    dplyr::filter(COMID %in% df$start) |>
+    dplyr::distinct(COMID, .keep_all = TRUE) |>
+    sf::st_as_sf() |>
+    sf::st_transform(5070)
+
+  # Indices for which burnline matches what flowline
+  .matches <- match(ble$COMID, nhd$COMID)
 
   rm(df)
 
   # This is where we replace the geometry
-  # FIXME: Are we actually changing it here? Seems like we are
-  # reusing the flowline geometry, but I might be misunderstanding.
   sf::st_geometry(nhd)[.matches] <- sf::st_geometry(ble)
   nhd$ble <- FALSE
   nhd$ble[.matches] <- TRUE
