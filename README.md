@@ -1,4 +1,4 @@
-# Reference Fabric
+# Reference Fabric <a href="https://github.com/lynker-spatial/reference.fabric"><img src="man/figures/logo.png" align="right" height="139"/></a>
 
 ## Installation
 
