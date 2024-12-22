@@ -114,7 +114,10 @@ rf.targets.clean_catchment <- function(cat_info, simplify_keep = 0.20) {
 #' @export
 rf.targets.rectify_catchment_borders <- function(cat_cleaned_paths, vpu_topology, dir_reference) {
   already_processed <- list.files(dir_reference, pattern = "catchments\\.fgb", recursive = TRUE, full.names = TRUE)
-  if (length(already_processed) == length(unique(unlist(vpu_topology)))) {
+
+  expect <- file.path(dir_reference, unique(unlist(vpu_topology)), "catchments.fgb")
+
+  if (all(expect %in% already_processed)) {
     return(already_processed)
   }
 
@@ -174,7 +177,14 @@ rf.targets.rectify_catchment_borders <- function(cat_cleaned_paths, vpu_topology
         sf::st_write(v_path_2, "catchments", delete_dsn = TRUE, quiet = TRUE)
   }
 
-  list.files(dir_reference, pattern = "catchments\\.fgb", recursive = TRUE, full.names = TRUE)
+  processed <-   list.files(dir_reference, pattern = "catchments\\.fgb", recursive = TRUE, full.names = TRUE)
+
+  if (all(expect %in% processed)) {
+    return(processed)
+  } else {
+    stop("rf.targets.rectify_catchment_borders failed and is missing ",
+         expect[!expect %in% processed])
+  }
 }
 
 #' Catchments Reference Output Target
