@@ -202,7 +202,11 @@ rf.targets.reference_catchments <- function(rf_cat_path) {
 
   cats <- sf::read_sf(rf_cat_path)
 
+  # 0 area polygons are degenerate and can be removed
+  cats <- dplyr::filter(cats, areasqkm > 1e-5)
+
   # Handle catchments fully within other catchments
+  try(cats <- sf::st_make_valid(cats))
   imap <- sf::st_within(cats)
 
   df <- data.frame(
