@@ -2,3 +2,5 @@
 ^reference\.fabric\.Rproj$
 ^_targets$
 ^\.Rprofile$
+^\.Rproj\.user$
+.Rhistory
