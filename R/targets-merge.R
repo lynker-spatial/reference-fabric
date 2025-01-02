@@ -27,7 +27,7 @@ rf.targets.merge_vpu <- function(merge_info) {
         options = c(
           "-f", "GPKG",
           "-t_srs", "EPSG:5070",
-          "-lco", paste0("FID=", ifelse(layer == "catchments", "featureid", "COMID")),
+          "-lco", paste0("FID=", ifelse(info$layer == "catchments", "featureid", "COMID")),
           "-sql", paste0(
             "SELECT * FROM ",
             info$layer,

@@ -26,12 +26,17 @@ rf.targets.clean_waterbodies <- function(waterbodies_path, dir_cleaned) {
     # Remove Holes
     sfheaders::sf_remove_holes() |>
     # Ensure shapes are valid
-    sf::st_make_value() |>
+    # sf::st_make_value() |>
     dplyr::left_join(sf::st_drop_geometry(wb), by = "COMID") |>
     dplyr::select(GNIS_ID, GNIS_NAME, COMID, FTYPE, geometry)
 
   wb_outfile <- file.path(dir_cleaned, rf.utils.extract_vpu(waterbodies_path), "waterbodies.fgb")
-  sf::st_write(wb_clean, wb_outfile, "waterbodies", delete_dsn = TRUE, quiet = TRUE)
+
+  reference.fabric::rf.utils.ensure_directory(dirname(wb_outfile))
+
+  if(file.exists(wb_outfile)) unlink(wb_outfile)
+
+  sf::st_write(wb_clean, wb_outfile, "waterbodies", quiet = TRUE)
   wb_outfile
 }
 

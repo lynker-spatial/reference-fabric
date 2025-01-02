@@ -1,5 +1,12 @@
 library(targets)
 
+# so parallel workers do I/O with the store
+tar_option_set(storage = "worker", retrieval = "worker")
+
+library(future)
+library(future.callr)
+plan(multisession)
+
 # Pipeline Configuration Options ----------------------------------------------
 rf.config.dir.base       <- getOption("rf.config.dir.base", "reference_fabric")
 rf.config.dir.data       <- file.path(rf.config.dir.base, "00_data")
@@ -59,12 +66,12 @@ list(
   targets::tar_target(rf_download_nhd,
     reference.fabric::rf.targets.download_nhd(rf_list_nhd),
     pattern = map(rf_list_nhd),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
   targets::tar_target(rf_convert_nhd,
     reference.fabric::rf.targets.convert_nhd(rf_download_nhd, rf_list_nhd),
     pattern = map(rf_download_nhd),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
   targets::tar_target(rf_nhd_catchment_path,
     sort(grep("catchments", rf_convert_nhd, value = TRUE))
@@ -86,7 +93,7 @@ list(
       rf.config.dir.cleaned
     ),
     pattern = map(rf_nhd_waterbody_path),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
   targets::tar_target(rf_wb_reference_waterbodies,
     reference.fabric::rf.targets.reference_waterbodies(
@@ -95,7 +102,7 @@ list(
       rf.config.dir.reference
     ),
     pattern = map(rf_wb_clean_waterbodies),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
 
   ## =============== Processing Burnlines =============== ##
@@ -135,7 +142,7 @@ list(
   targets::tar_target(rf_cat_reference_catchments,
     reference.fabric::rf.targets.reference_catchments(rf_cat_rectify_borders),
     pattern = map(rf_cat_rectify_borders),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
 
   ## =============== Processing Flowlines =============== ##
@@ -149,7 +156,7 @@ list(
       rf.config.dir.cleaned
     ),
     pattern = map(rf_nhd_flowline_path),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
   targets::tar_target(rf_fl_reference_flowlines,
     reference.fabric::rf.targets.reference_flowlines(
@@ -159,7 +166,7 @@ list(
       rf.config.dir.reference
     ),
     pattern = map(rf_fl_clean_flowlines),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
 
   ## =============== Output Reference Features =============== ##
@@ -177,7 +184,7 @@ list(
   targets::tar_target(rf_merge_vpu,
     reference.fabric::rf.targets.merge_vpu(rf_merge_info),
     pattern = map(rf_merge_info),
-    format = "file"
+    format = "file", deployment = "worker"
   ),
   targets::tar_target(rf_merge_conus,
     reference.fabric::rf.targets.merge_conus(rf_merge_info),

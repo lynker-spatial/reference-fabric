@@ -86,6 +86,13 @@ rf.targets.clean_flowlines <- function(flowlines_path, rf_cat_paths, rf_ble_path
 
   rm(df)
 
+  # check that the outlet node is the same from before to now
+  flips <- sapply(seq_len(nrow(ble)), \(x) isTRUE(all.equal(
+    sf::st_geometry(nhdplusTools::get_node(sf::st_geometry(nhd)[.matches], position = "end"))[[x]],
+    sf::st_geometry(nhdplusTools::get_node(sf::st_geometry(ble), position = "end"))[[x]])))
+
+  sf::st_geometry(ble)[flips] <- sf::st_reverse(sf::st_geometry(ble)[flips])
+  
   # This is where we replace the geometry
   sf::st_geometry(nhd)[.matches] <- sf::st_geometry(ble)
   nhd$ble <- FALSE
