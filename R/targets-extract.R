@@ -108,17 +108,39 @@ rf.targets.list_nhd <- function(dir.epa, dir.nhd) {
 }
 
 #' @export
+rf.targets.download_usgs_poi <- function(outfile) {
+  
+  if (!file.exists(outfile)) {
+    # using httr because SB has a looooong lag that times out with download.file
+    sb_id   <- '61295190d34e40dd9c06bcd7'
+    file_id <- 'reference_CONUS.gpkg'
+    
+    httr::GET('https://prod-is-usgs-sb-prod-publish.s3.amazonaws.com/{sb_id}/{file_id}', 
+              httr::write_disk(outfile, overwrite = TRUE), 
+              httr::progress())
+    
+    n <- sf::st_layers(outfile)$name
+    
+    n <- n[!grepl("poi", n)]
+    
+    invisible(lapply(n, function(x) sf::st_delete(outfile, x)))
+  }
+
+  outfile
+}
+
+#' @export
 rf.targets.download_nhd <- function(.row) {
-  .urls    <- dplyr::select(.row, url, destfile = archive)
+  .urls    <-  dplyr::select(.row, url, destfile = archive)
   url      <- .urls$url
   destfile <- .urls$destfile
-
+  
   if (!file.exists(.row$shp)) {
     utils::download.file(url, destfile, mode = "wb")
     archive::archive_extract(destfile, dir = dirname(destfile))
     unlink(destfile)
   }
-
+  
   .row$shp
 }
 

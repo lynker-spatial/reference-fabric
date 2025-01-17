@@ -1,9 +1,9 @@
-# Reference Fabric <a href="https://github.com/lynker-spatial/reference.fabric"><img src="man/figures/logo.png" align="right" height="139"/></a>
+# Reference Fabric <a href="https://github.com/owp-spatial/reference.fabric"><img src="man/figures/logo.png" align="right" height="139"/></a>
 
 ## Installation
 
 ```r
-pak::pkg_install("lynker-spatial/reference.fabric")
+pak::pkg_install("owp-spatial/reference.fabric")
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ reference.fabric::make_fabric(callr_function = NULL)
 To run in a clean environment with custom options, modify
 options in a `.Rprofile` file in the project directory
 the workflow will be executed from. Using this approach,
-the new callr environment will load the desired options
+the new `callr` environment will load the desired options
 at startup.
 
 ## Development
