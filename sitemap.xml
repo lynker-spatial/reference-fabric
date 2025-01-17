@@ -1,0 +1,19 @@
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://owp-spatial.github.io/reference.fabric/404.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/LICENSE-text.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/LICENSE.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/authors.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/index.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/index.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/make_fabric.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.helper.copy_file.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.burnline_events.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.clean_catchment.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.clean_flowlines.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.clean_waterbodies.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.rectify_catchment_borders.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.reference_catchments.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.reference_flowlines.html</loc></url>
+<url><loc>https://owp-spatial.github.io/reference.fabric/reference/rf.targets.reference_waterbodies.html</loc></url>
+</urlset>
+
