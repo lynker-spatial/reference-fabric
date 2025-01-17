@@ -21,6 +21,9 @@ rf.config.file.enhd      <- getOption("rf.config.file.enhd", file.path(rf.config
 rf.config.file.vaa       <- getOption("rf.config.file.vaa", file.path(rf.config.dir.data, "vaa_nhdplusatts.parquet"))
 rf.config.file.nhdplus   <- getOption("rf.config.file.nhdplus", file.path(rf.config.dir.data, "NHDPlusNationalData", "NHDPlusV21_National_Seamless_Flattened_Lower48.gdb"))
 rf.config.file.usgs_poi  <- getOption("rf.config.file.usgs_poi", file.path(rf.config.dir.data, "usgs_poi_file.gpkg"))
+rf.config.reference_fabric <- getOption("rf.config.reference_fabric", file.path(rf.config.dir.data, "rf.config.reference_fabric.gpkg"))
+
+
 
 rf.config.epa_bucket     <- getOption("rf.config.epa_bucket", "dmap-data-commons-ow")
 rf.config.simplify_keep  <- getOption("rf.config.simplify_keep", 0.20)
@@ -202,7 +205,7 @@ list(
   
   ## =============== Output Reference Features =============== ##
   targets::tar_target(reference_fabric_gpkg,
-                      reference.fabric::rf.targets.data_model(rf_merge_conus, rf_usgs_poi_file),
+                      reference.fabric::rf.targets.data_model(rf_merge_conus, rf_usgs_poi_file, rf.config.reference_fabric),
                       format = "file"
   )
 )

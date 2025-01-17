@@ -1,12 +1,9 @@
 #' @export
-rf.targets.data_model <- function(rf_merge_conus, poi_file) {
+rf.targets.data_model <- function(rf_merge_conus, poi_file, outfile) {
   
   gpkg      <- normalizePath(rf_merge_conus)
   poi_file  <- normalizePath(poi_file)
-  # gpkg <- '/Users/mikejohnson/Downloads/conus_reference_features.gpkg'
-  # poi_file <- "test.gpkg"
-  
-  
+
   # Load reference flowlines from geopackage as an sf object
   fl <- sf::read_sf(gpkg, 'flowlines') 
   
@@ -97,9 +94,11 @@ rf.targets.data_model <- function(rf_merge_conus, poi_file) {
     ) |> 
     dplyr::select(flowpath_id, divide_id, poi_id, hl_reference, hl_link, dplyr::everything())
   
-  sf::write_sf(div,  gpkg, "divides", overwrite = TRUE)
-  sf::write_sf(fl,   gpkg, "flowpaths", overwrite = TRUE)
-  sf::write_sf(net,  gpkg, "network")
-  sf::write_sf(hl,   gpkg, "hydrolocations")
-  sf::write_sf(poi,  gpkg, "pois")
+  sf::write_sf(div,  outfile, "divides")
+  sf::write_sf(fl,   outfile, "flowpaths")
+  sf::write_sf(net,  outfile, "network")
+  sf::write_sf(hl,   outfile, "hydrolocations")
+  sf::write_sf(poi,  outfile, "pois")
+  
+  outfile
 }
