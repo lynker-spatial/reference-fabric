@@ -115,7 +115,7 @@ rf.targets.download_usgs_poi <- function(outfile) {
     sb_id   <- '61295190d34e40dd9c06bcd7'
     file_id <- 'reference_CONUS.gpkg'
     
-    httr::GET('https://prod-is-usgs-sb-prod-publish.s3.amazonaws.com/{sb_id}/{file_id}', 
+    httr::GET(glue::glue('https://prod-is-usgs-sb-prod-publish.s3.amazonaws.com/{sb_id}/{file_id}'), 
               httr::write_disk(outfile, overwrite = TRUE), 
               httr::progress())
     

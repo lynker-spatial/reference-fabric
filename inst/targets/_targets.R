@@ -198,5 +198,11 @@ list(
   targets::tar_target(rf_merge_conus,
     reference.fabric::rf.targets.merge_conus(rf_merge_info),
     format = "file"
+  ),
+  
+  ## =============== Output Reference Features =============== ##
+  targets::tar_target(reference_fabric_gpkg,
+                      reference.fabric::rf.targets.data_model(rf_merge_conus, rf_usgs_poi_file),
+                      format = "file"
   )
 )
