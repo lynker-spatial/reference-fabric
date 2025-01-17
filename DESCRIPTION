@@ -1,11 +1,11 @@
 Package: reference.fabric
 Title: Hydrological Reference Fabric Tools
-Version: 1.0.0.9000
+Version: 1.0.1
 Authors@R:
     c(person(given = "Mike",
              family = "Johnson",
              role = "aut",
-             email = "jjohnson@lynker.com",
+             email = "mike.johnson@noaa.com",
              comment = c(ORCID = "0000-0002-5288-8350")),
       person(given = "Justin",
              family = "Singh-Mohudpur",
@@ -13,8 +13,8 @@ Authors@R:
              email = "jsmohudpur@lynker.com",
              comment = c(ORCID = "0000-0002-5233-5799")))
 Description: Development tools and `targets` pipeline for generating a national hydrological geospatial reference fabric.
-URL: https://github.com/lynker-spatial/reference.fabric
-BugReports: https://github.com/lynker-spatial/reference.fabric/issues
+URL: https://github.com/owp-spatial/reference.fabric
+BugReports: https://github.com/owp-spatial/reference.fabric/issues
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -27,8 +27,11 @@ Imports:
     arrow,
     aws.s3,
     dplyr,
+    httr,
     hydrofab,
+    ncmeta,
     nhdplusTools,
+    RNetCDF,
     rmapshaper,
     sbtools,
     sf,
@@ -37,4 +40,4 @@ Imports:
     utils,
     yyjsonr
 Remotes:
-    mikejohnson51/hydrofab
+    NOAA-OWP/hydrofab
