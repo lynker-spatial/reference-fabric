@@ -13,7 +13,7 @@ Authors@R:
              email = "jsmohudpur@lynker.com",
              comment = c(ORCID = "0000-0002-5233-5799")))
 Description: Development tools and `targets` pipeline for generating a national hydrological geospatial reference fabric.
-URL: https://github.com/owp-spatial/reference.fabric
+URL: https://github.com/owp-spatial/reference.fabric, https://owp-spatial.github.io/reference.fabric/
 BugReports: https://github.com/owp-spatial/reference.fabric/issues
 License: Apache License (>= 2)
 Encoding: UTF-8

@@ -4,3 +4,7 @@
 ^\.Rprofile$
 ^\.Rproj\.user$
 .Rhistory
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
