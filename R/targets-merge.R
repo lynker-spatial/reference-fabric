@@ -27,7 +27,6 @@ rf.targets.merge_vpu <- function(merge_info) {
         options = c(
           "-f", "GPKG",
           "-t_srs", "EPSG:5070",
-          "-lco", paste0("FID=", ifelse(info$layer == "catchments", "featureid", "COMID")),
           "-sql", paste0(
             "SELECT * FROM ",
             info$layer,
@@ -36,7 +35,6 @@ rf.targets.merge_vpu <- function(merge_info) {
             " DESC"
           ),
           "-makevalid",
-          "-upsert",
           "-nln", info$layer
         )
       )
@@ -69,7 +67,6 @@ rf.targets.merge_conus <- function(merge_info) {
           options = c(
             "-f", "GPKG",
             "-t_srs", "EPSG:5070",
-            "-lco", paste0("FID=", ifelse(layer == "catchments", "featureid", "COMID")),
             "-sql", paste0(
               "SELECT * FROM ",
               layer,
@@ -78,7 +75,6 @@ rf.targets.merge_conus <- function(merge_info) {
               " DESC"
             ),
             "-makevalid",
-            "-upsert",
             "-nln", layer
           )
         )
