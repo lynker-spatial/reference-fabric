@@ -130,6 +130,50 @@ rf.targets.download_usgs_poi <- function(outfile) {
 }
 
 #' @export
+rf.targets.download_nwm_poi <- function(outfile) {
+  
+  base <- 'https://spatial-water-noaa.s3.us-east-1.amazonaws.com'
+  
+  if (!file.exists(outfile)) {
+   httr::GET(glue::glue('{base}/nwm/nwm_lakes.gpkg'), 
+             httr::write_disk(outfile, overwrite = TRUE),
+             httr::progress()
+   )
+  }
+  
+  outfile
+}
+
+#' @export
+rf.targets.download_nws_poi <- function(outfile) {
+  
+  base <- 'https://spatial-water-noaa.s3.us-east-1.amazonaws.com'
+  
+  if (!file.exists(outfile)) {
+    httr::GET(glue::glue('{base}/nwm/nws_lid.gpkg'), 
+              httr::write_disk(outfile, overwrite = TRUE),
+              httr::progress())
+  }
+  
+  outfile
+}
+
+#' @export
+rf.targets.download_coastal_poi <- function(outfile) {
+  
+  base <- 'https://spatial-water-noaa.s3.us-east-1.amazonaws.com'
+  
+  if (!file.exists(outfile)) {
+    httr::GET(glue::glue('{base}/hydrofabric/pois/coastal_pois_twl.gpkg'), 
+              httr::write_disk(outfile, overwrite = TRUE),
+              httr::progress()
+    )
+  }
+  
+  outfile
+}
+
+#' @export
 rf.targets.download_nhd <- function(.row) {
   .urls    <-  dplyr::select(.row, url, destfile = archive)
   url      <- .urls$url

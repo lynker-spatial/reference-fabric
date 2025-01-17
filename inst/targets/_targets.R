@@ -17,13 +17,16 @@ rf.config.dir.simplified <- file.path(rf.config.dir.base, "04_simplified")
 rf.config.dir.reference  <- file.path(rf.config.dir.base, "05_reference")
 rf.config.dir.output     <- file.path(rf.config.dir.base, "06_output")
 
-rf.config.file.enhd      <- getOption("rf.config.file.enhd", file.path(rf.config.dir.data, "enhd_nhdplusatts.parquet"))
-rf.config.file.vaa       <- getOption("rf.config.file.vaa", file.path(rf.config.dir.data, "vaa_nhdplusatts.parquet"))
-rf.config.file.nhdplus   <- getOption("rf.config.file.nhdplus", file.path(rf.config.dir.data, "NHDPlusNationalData", "NHDPlusV21_National_Seamless_Flattened_Lower48.gdb"))
-rf.config.file.usgs_poi  <- getOption("rf.config.file.usgs_poi", file.path(rf.config.dir.data, "usgs_poi_file.gpkg"))
+rf.config.file.enhd        <- getOption("rf.config.file.enhd", file.path(rf.config.dir.data, "enhd_nhdplusatts.parquet"))
+rf.config.file.vaa         <- getOption("rf.config.file.vaa", file.path(rf.config.dir.data, "vaa_nhdplusatts.parquet"))
+rf.config.file.nhdplus     <- getOption("rf.config.file.nhdplus", file.path(rf.config.dir.data, "NHDPlusNationalData", "NHDPlusV21_National_Seamless_Flattened_Lower48.gdb"))
+
+rf.config.file.usgs_poi       <- getOption("rf.config.file.usgs_poi",    file.path(rf.config.dir.data, "usgs_poi.gpkg"))
+rf.config.file.coastal_poi    <- getOption("rf.config.file.coastal_poi", file.path(rf.config.dir.data, "coastal_poi.gpkg"))
+rf.config.file.nws_poi        <- getOption("rf.config.file.nws_poi",     file.path(rf.config.dir.data, "nws_poi.gpkg"))
+rf.config.file.nwm_poi        <- getOption("rf.config.file.nwm_poi",     file.path(rf.config.dir.data, "nwm_poi.gpkg"))
+
 rf.config.reference_fabric <- getOption("rf.config.reference_fabric", file.path(rf.config.dir.data, "rf.config.reference_fabric.gpkg"))
-
-
 
 rf.config.epa_bucket     <- getOption("rf.config.epa_bucket", "dmap-data-commons-ow")
 rf.config.simplify_keep  <- getOption("rf.config.simplify_keep", 0.20)
@@ -92,9 +95,25 @@ list(
     sort(grep("burnlines", rf_convert_nhd, value = TRUE))
   ),
 
+  ## =============== Processing Waterbodies =============== ##
   # USGS Reference Fabric: POIs
   targets::tar_target(rf_usgs_poi_file,
                       reference.fabric::rf.targets.download_usgs_poi(rf.config.file.usgs_poi),
+                      format = "file"
+  ),
+  # Coastal: POIs
+  targets::tar_target(rf_coastal_poi_file,
+                      reference.fabric::rf.targets.download_coastal_poi(rf.config.file.coastal_poi),
+  format = "file"
+  ),
+  # NWS: POIs
+  targets::tar_target(rf_nws_poi_file,
+                      reference.fabric::rf.targets.download_nws_poi(rf.config.file.nws_poi),
+                      format = "file"
+  ),
+  # NWM: POIs
+  targets::tar_target(rf_nwm_poi_file,
+                      reference.fabric::rf.targets.download_nwm_poi(rf.config.file.nwm_poi),
                       format = "file"
   ),
   
